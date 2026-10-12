@@ -1,5 +1,5 @@
-// غيّر رقم الإصدار كلما حدّثت الموقع ليتجدد المخزن
-const CACHE = "fadlallah-v1";
+// غيّر رقم الإصدار عند كل تحديث كبير
+const CACHE = "fadlallah-v2";
 const CORE = [
   "./",
   "./index.html",
@@ -22,20 +22,21 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// الشبكة أولًا (أحدث نسخة دائمًا)، وإن لم يوجد إنترنت تُعرض النسخة المحفوظة
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
-  // يعرض النسخة المحفوظة فورًا ويحدّثها في الخلفية
   e.respondWith(
-    caches.match(req).then((cached) => {
-      const fresh = fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-          return res;
-        })
-        .catch(() => cached || (req.mode === "navigate" ? caches.match("./index.html") : undefined));
-      return cached || fresh;
-    })
+    fetch(req, { cache: "no-cache" })
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+        return res;
+      })
+      .catch(() =>
+        caches.match(req).then(
+          (cached) => cached || (req.mode === "navigate" ? caches.match("./index.html") : undefined)
+        )
+      )
   );
 });
